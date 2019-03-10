@@ -1,4 +1,4 @@
-package fr.inria.astor.core.solutionsearch.spaces.ingredients.ingredientSearch;
+package fr.inria.astor.approaches.promising;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +11,7 @@ import fr.inria.astor.core.setup.ConfigurationProperties;
 import fr.inria.astor.core.setup.RandomManager;
 import fr.inria.astor.core.solutionsearch.spaces.ingredients.IngredientPool;
 import fr.inria.astor.core.solutionsearch.spaces.ingredients.scopes.ExpressionTypeIngredientSpace;
+import fr.inria.astor.core.solutionsearch.spaces.ingredients.ingredientSearch.RandomSelectionTransformedIngredientStrategy;
 import fr.inria.astor.core.solutionsearch.spaces.operators.AstorOperator;
 import fr.inria.astor.util.MapList;
 
@@ -21,9 +22,9 @@ import fr.inria.astor.util.MapList;
  * @author Gabin An
  *
  */
-public class ProbabilisticIngredientStrategy extends RandomSelectionTransformedIngredientStrategy {
+public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedIngredientStrategy {
 
-	public ProbabilisticIngredientStrategy(IngredientPool space) {
+	public SimilarIngredientSearchStrategy(IngredientPool space) {
 		super(space);
 	}
 
