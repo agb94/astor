@@ -36,6 +36,8 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 
 		int attemptsBaseIngredients = 0;
 
+		log.info("****************GABIN INGREDIENTS**************");
+
 		List<Ingredient> baseElements = getNotExhaustedBaseElements(modificationPoint, operationType);
 
 		if (baseElements == null || baseElements.isEmpty()) {

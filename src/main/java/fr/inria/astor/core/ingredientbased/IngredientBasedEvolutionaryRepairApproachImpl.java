@@ -230,8 +230,6 @@ public abstract class IngredientBasedEvolutionaryRepairApproachImpl extends Evol
 				ingStrategy = new ProbabilisticIngredientStrategy(ingredientspace);
 			} else if (ingStrategySt.equals("code-similarity-based")) {
 				ingStrategy = new CloneIngredientSearchStrategy(ingredientspace);
-			} else if (ingStrategySt.equals("lexical-similarity-based")) {
-				ingStrategy = new SimilarIngredientSearchStrategy(ingredientspace);
 			} else {
 				ingStrategy = (IngredientSearchStrategy) PlugInLoader.loadPlugin(
 						ExtensionPoints.INGREDIENT_SEARCH_STRATEGY, new Class[] { IngredientPool.class },
