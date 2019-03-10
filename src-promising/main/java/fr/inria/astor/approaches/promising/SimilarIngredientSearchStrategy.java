@@ -129,27 +129,23 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 		if(elements == null){
 			return null;
 		}
-		if (ConfigurationProperties.getPropertyBool("frequenttemplate")) {
-			log.debug("Defining template order for "+modificationPoint);
-			ExpressionTypeIngredientSpace space = (ExpressionTypeIngredientSpace) this.getIngredientSpace();
 
-			// Ingredients from space
-			// ingredients to string
-			elements2String = new ArrayList<>();
-			for (Ingredient cm : elements) {
-				elements2String.add(cm.toString());
+		//info -> debug
+		log.info("ModificationPoint: " + modificationPoint.getCodeElement().toString());
+
+		// Ingredients from space
+		// ingredients to string
+		int count = 0;
+		elements2String = new ArrayList<>();
+		for (Ingredient cm : elements) {
+			elements2String.add(cm.toString());
+			if (count < 10) {
+				log.info("ingredient: " + cm.toString());
 			}
-			// Obtaining counting of templates from the space
-			MapList mp = new MapList<>();
-			mp.putAll(space.linkTemplateElements);
-			mp.keySet().removeIf(e -> !elements2String.contains(e));
-
-			// Obtaining accumulate frequency of elements
-			probs = mp.getProb().getProbAccumulative();
-
+			count += 1;
 		}
-		return elements;
 
+		return elements;
 	}
 
 	@Override
