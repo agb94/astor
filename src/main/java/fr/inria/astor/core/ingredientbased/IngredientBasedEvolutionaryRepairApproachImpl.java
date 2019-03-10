@@ -5,6 +5,7 @@ import java.util.List;
 import com.martiansoftware.jsap.JSAPException;
 
 import fr.inria.astor.approaches.deeprepair.CloneIngredientSearchStrategy;
+import fr.inria.astor.approaches.promising.SimilarIngredientSearchStrategy;
 import fr.inria.astor.core.entities.Ingredient;
 import fr.inria.astor.core.entities.ModificationPoint;
 import fr.inria.astor.core.entities.OperatorInstance;
@@ -229,6 +230,8 @@ public abstract class IngredientBasedEvolutionaryRepairApproachImpl extends Evol
 				ingStrategy = new ProbabilisticIngredientStrategy(ingredientspace);
 			} else if (ingStrategySt.equals("code-similarity-based")) {
 				ingStrategy = new CloneIngredientSearchStrategy(ingredientspace);
+			} else if (ingStrategySt.equals("lexical-similarity-based")) {
+				ingStrategy = new SimilarIngredientSearchStrategy(ingredientspace);
 			} else {
 				ingStrategy = (IngredientSearchStrategy) PlugInLoader.loadPlugin(
 						ExtensionPoints.INGREDIENT_SEARCH_STRATEGY, new Class[] { IngredientPool.class },

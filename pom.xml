@@ -278,6 +278,7 @@
 								<source>src-jmutrepair/main/java</source>
 								<source>src-cardumen/main/java</source>
 								<source>src-deeprepair/main/java</source>
+								<source>src-promising/main/java</source>
 							</sources>
 						</configuration>
 					</execution>
