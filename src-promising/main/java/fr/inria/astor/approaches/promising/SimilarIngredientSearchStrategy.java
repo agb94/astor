@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import fr.inria.astor.approaches.jgenprog.operators.ReplaceOp;
+import org.apache.log4j.Logger;
+
 import fr.inria.astor.core.entities.Ingredient;
 import fr.inria.astor.core.entities.ModificationPoint;
 import fr.inria.astor.core.setup.ConfigurationProperties;
@@ -13,7 +14,9 @@ import fr.inria.astor.core.solutionsearch.spaces.ingredients.IngredientPool;
 import fr.inria.astor.core.solutionsearch.spaces.ingredients.scopes.ExpressionTypeIngredientSpace;
 import fr.inria.astor.core.solutionsearch.spaces.ingredients.ingredientSearch.RandomSelectionTransformedIngredientStrategy;
 import fr.inria.astor.core.solutionsearch.spaces.operators.AstorOperator;
+import fr.inria.astor.core.stats.Stats;
 import fr.inria.astor.util.MapList;
+import fr.inria.astor.util.StringUtil;
 
 /**
  * A strategy to pick an ingredient from the fix space using code fragments'
@@ -26,6 +29,59 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 
 	public SimilarIngredientSearchStrategy(IngredientPool space) {
 		super(space);
+	}
+
+	@Override
+	public Ingredient getFixIngredient(ModificationPoint modificationPoint, AstorOperator operationType) {
+
+		int attemptsBaseIngredients = 0;
+
+		List<Ingredient> baseElements = getNotExhaustedBaseElements(modificationPoint, operationType);
+
+		if (baseElements == null || baseElements.isEmpty()) {
+			log.debug("Any template available for mp " + modificationPoint);
+			List usedElements = this.exhaustTemplates.get(getKey(modificationPoint, operationType));
+			if (usedElements != null)
+				log.debug("#templates already used: " + usedElements.size());
+			return null;
+		}
+
+		int elementsFromFixSpace = baseElements.size();
+		log.debug("Templates availables: " + elementsFromFixSpace);
+
+		Stats.currentStat.getIngredientsStats().addSize(Stats.currentStat.getIngredientsStats().ingredientSpaceSize,
+				baseElements.size());
+
+		while (attemptsBaseIngredients < elementsFromFixSpace) {
+
+			log.debug(String.format("Attempts Base Ingredients  %d total %d", attemptsBaseIngredients,
+					elementsFromFixSpace));
+
+			Ingredient baseIngredient = getRandomStatementFromSpace(baseElements);
+
+			if (baseIngredient == null || baseIngredient.getCode() == null) {
+
+				return null;
+			}
+
+			Ingredient refinedIngredient = getNotUsedTransformedElement(modificationPoint, operationType,
+					baseIngredient);
+
+			attemptsBaseIngredients++;
+
+			if (refinedIngredient != null) {
+
+				refinedIngredient.setDerivedFrom(baseIngredient.getCode());
+				return refinedIngredient;
+			}
+
+		} // End while
+
+		log.debug("--- no mutation left to apply in element "
+				+ StringUtil.trunc(modificationPoint.getCodeElement().getShortRepresentation())
+				+ ", search space size: " + elementsFromFixSpace);
+		return null;
+
 	}
 
 	@Override
