@@ -3,7 +3,13 @@ package fr.inria.astor.approaches.promising;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.io.PrintWriter;
+import java.io.IOException;
+import java.time.Instant;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.apache.log4j.Logger;
 
 import fr.inria.astor.core.entities.Ingredient;
@@ -133,17 +139,27 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 		//info -> debug
 		log.info("ModificationPoint: " + modificationPoint.getCodeElement().toString());
 
-		// Ingredients from space
-		// ingredients to string
-		int count = 0;
-		elements2String = new ArrayList<>();
-		for (Ingredient cm : elements) {
-			elements2String.add(cm.toString());
-			if (count < 10) {
-				log.info("ingredient: " + cm.toString());
+		Instant instant = Instant.now();
+
+		String location = ConfigurationProperties.getProperty("location");
+		String inputPath = location + "/.simInput"+instant.toEpochMilli();
+
+		try {
+			PrintWriter pw = new PrintWriter(inputPath);
+
+			pw.println(modificationPoint.getCodeElement().toString().trim());
+			pw.println();
+			// Ingredients from space
+			// ingredients to string
+			elements2String = new ArrayList<>();
+			for (Ingredient cm : elements) {
+				elements2String.add(cm.toString());
+				pw.println(cm.toString().trim());
 			}
-			count += 1;
-		}
+	        pw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 		return elements;
 	}
