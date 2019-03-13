@@ -3,7 +3,7 @@ package fr.inria.astor.approaches.promising;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.io.PrintWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Instant;
 
@@ -12,6 +12,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.apache.log4j.Logger;
 
+import fr.inria.astor.approaches.jgenprog.operators.ReplaceOp;
 import fr.inria.astor.core.entities.Ingredient;
 import fr.inria.astor.core.entities.ModificationPoint;
 import fr.inria.astor.core.setup.ConfigurationProperties;
@@ -123,55 +124,48 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 		return null;
 	}
 
-	List<String> elements2String = null;
-	Map<String, Double> probs = null;
-
 	@Override
 	public List<Ingredient> getNotExhaustedBaseElements(ModificationPoint modificationPoint,
 			AstorOperator operationType) {
 
-		List<Ingredient> elements = super.getNotExhaustedBaseElements(modificationPoint, operationType);
+		List<Ingredient> elements = this.ingredientSpace.getIngredients(modificationPoint.getCodeElement());
 
-		if(elements == null){
+		if (elements == null)
 			return null;
+
+		if (operationType instanceof ReplaceOp) {
+			//info -> debug
+			log.info("ModificationPoint: " + modificationPoint.getCodeElement().toString());
+			
+			// Create JSON object
+			JSONObject obj = new JSONObject();
+			obj.put("ModificationPoint", modificationPoint.getCodeElement().toString());
+			JSONArray ingredients = new JSONArray();
+			for (Ingredient cm : elements) {
+				ingredients.add(cm.toString());
+			}
+			obj.put("Ingredients", ingredients);
+
+			String location = ConfigurationProperties.getProperty("location");
+			String modelInputPath = location + "/.simInput" + Instant.now().toEpochMilli();
+
+			try(FileWriter modelInput = new FileWriter(modelInputPath)) {
+				modelInput.write(obj.toJSONString());
+				log.info("Successfully Copied JSON object to File ...");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
-		//info -> debug
-		log.info("ModificationPoint: " + modificationPoint.getCodeElement().toString());
+		List<Ingredient> uniques = new ArrayList<>(elements);
 
-		Instant instant = Instant.now();
+		String key = getKey(modificationPoint, operationType);
+		List<Ingredient> exhaustives = this.exhaustTemplates.get(key);
 
-		String location = ConfigurationProperties.getProperty("location");
-		String inputPath = location + "/.simInput"+instant.toEpochMilli();
-
-		try {
-			PrintWriter pw = new PrintWriter(inputPath);
-
-			pw.println(modificationPoint.getCodeElement().toString().trim());
-			pw.println();
-			// Ingredients from space
-			// ingredients to string
-			elements2String = new ArrayList<>();
-			for (Ingredient cm : elements) {
-				elements2String.add(cm.toString());
-				pw.println(cm.toString().trim());
-			}
-	        pw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-		return elements;
-	}
-
-	@Override
-	protected Ingredient getRandomStatementFromSpace(List<Ingredient> fixSpace) {
-
-		if (ConfigurationProperties.getPropertyBool("frequenttemplate"))
-
-			return getTemplateByWeighted(fixSpace, elements2String, probs);
-		else
-			return super.getRandomStatementFromSpace(fixSpace);
+		if (exhaustives != null) {
+			boolean removed = uniques.removeAll(exhaustives);
+		}
+		return uniques;
 	}
 
 }
