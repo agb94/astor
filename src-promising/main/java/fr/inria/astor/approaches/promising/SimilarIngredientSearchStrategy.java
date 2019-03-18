@@ -3,6 +3,10 @@ package fr.inria.astor.approaches.promising;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.Arrays;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Instant;
@@ -10,7 +14,10 @@ import java.time.Instant;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+
 import org.apache.log4j.Logger;
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.DefaultExecutor;
 
 import fr.inria.astor.approaches.jgenprog.operators.ReplaceOp;
 import fr.inria.astor.core.entities.Ingredient;
@@ -148,13 +155,48 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 
 			String location = ConfigurationProperties.getProperty("location");
 			String modelInputPath = location + "/.simInput" + Instant.now().toEpochMilli();
+			String modelOutputPath = location + "/.simOutput" + Instant.now().toEpochMilli();
 
 			try(FileWriter modelInput = new FileWriter(modelInputPath)) {
 				modelInput.write(obj.toJSONString());
-				log.info("Successfully Copied JSON object to File ...");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+
+			DefaultExecutor executor = new DefaultExecutor();
+			String[] command = { "python", "find_similar.py", modelInputPath };
+			CommandLine cmdLine = CommandLine.parse(command[0]);
+		    for (int i = 1, n = command.length; i < n; i++ ) {
+		        cmdLine.addArgument(command[i]);
+		    }
+
+		    try {
+		    	executor.execute(cmdLine);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+		    List<Integer> filteringResult = new ArrayList<Integer>();
+		    try {
+	            File file = new File(modelOutputPath);
+	            Scanner scan = new Scanner(file);
+	            if (scan.hasNextLine()){
+	            	for (String b : scan.nextLine().split(","))	{
+	            		filteringResult.add(Integer.parseInt(b));
+		    		}
+	            }
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        }
+
+	        List<Ingredient> filteredElements = new ArrayList<Ingredient>();
+	        for (int i = 0, n = elements.size(); i < n; i++) {
+	        	if (filteringResult.get(i) == 1){
+	        		filteredElements.add(elements.get(i));
+	        	}
+	        }
+	        log.info(elements.size() + " -> " + filteredElements.size());
+	        elements = filteredElements;
 		}
 
 		List<Ingredient> uniques = new ArrayList<>(elements);

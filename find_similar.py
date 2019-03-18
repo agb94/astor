@@ -1,21 +1,32 @@
 import json
 import sys
 import pickle
+import numpy as np
+from extract_features import extract_features
 
-def extract_features(target, candidates):
-    return null
-    
+T = 0.05
+
 with open(sys.argv[1], 'r') as f:
     data = json.load(f)
 
 modi_point = data['ModificationPoint']
 ingredients = data['Ingredients']
-print("Total ingredients: {}".format(len(ingredients))) 
 
-X = extract_features(modi_point, ingredients)
+features = extract_features(modi_point, ingredients)
+X = []
+for ingredient in features:
+    X.append(features[ingredient])
+X = np.array(X)
 
-clf = pickle.load(open('../ASE19/model_NN50d_1547464892.sav', 'rb'))
-p = clf.predict(X)
+clf = pickle.load(open('model_NN50d_1547464892.sav', 'rb'))
 proba = clf.predict_proba(X)
 
-print("blabla")
+cands = [str(int(p[1] > T)) for p in proba]
+"""
+for i, c in enumerate(cands):
+    if int(c) == 1:
+        print(ingredients[i])
+        print("===============================")
+"""
+with open(sys.argv[1].replace('Input', 'Output'), 'w') as f:
+    f.write(','.join(cands))
