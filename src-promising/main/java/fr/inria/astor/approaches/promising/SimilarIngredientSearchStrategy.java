@@ -25,8 +25,8 @@ import fr.inria.astor.core.entities.ModificationPoint;
 import fr.inria.astor.core.setup.ConfigurationProperties;
 import fr.inria.astor.core.setup.RandomManager;
 import fr.inria.astor.core.solutionsearch.spaces.ingredients.IngredientPool;
+import fr.inria.astor.core.solutionsearch.spaces.ingredients.IngredientSearchStrategy;
 import fr.inria.astor.core.solutionsearch.spaces.ingredients.scopes.ExpressionTypeIngredientSpace;
-import fr.inria.astor.core.solutionsearch.spaces.ingredients.ingredientSearch.RandomSelectionTransformedIngredientStrategy;
 import fr.inria.astor.core.solutionsearch.spaces.operators.AstorOperator;
 import fr.inria.astor.core.stats.Stats;
 import fr.inria.astor.util.MapList;
@@ -39,56 +39,68 @@ import fr.inria.astor.util.StringUtil;
  * @author Gabin An
  *
  */
-public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedIngredientStrategy {
+public class SimilarIngredientSearchStrategy extends IngredientSearchStrategy {
+
+
+	private static final Boolean DESACTIVATE_CACHE = ConfigurationProperties
+			.getPropertyBool("desactivateingredientcache");
+
+	protected Logger log = Logger.getLogger(this.getClass().getName());
 
 	public SimilarIngredientSearchStrategy(IngredientPool space) {
 		super(space);
+
 	}
 
+	public MapList<String, String> cache = new MapList<>();
+
+	/**
+	 * Return an ingredient. As it has a cache, it never returns twice the same
+	 * ingredient.
+	 * 
+	 * @param modificationPoint
+	 * @param targetStmt
+	 * @param operationType
+	 * @param elementsFromFixSpace
+	 * @return
+	 */
 	@Override
 	public Ingredient getFixIngredient(ModificationPoint modificationPoint, AstorOperator operationType) {
 
 		int attemptsBaseIngredients = 0;
 
-		log.info("****************GABIN INGREDIENTS**************");
-
-		List<Ingredient> baseElements = getNotExhaustedBaseElements(modificationPoint, operationType);
+		List<Ingredient> baseElements = geIngredientsFromSpace(modificationPoint, operationType);
 
 		if (baseElements == null || baseElements.isEmpty()) {
-			log.debug("Any template available for mp " + modificationPoint);
-			List usedElements = this.exhaustTemplates.get(getKey(modificationPoint, operationType));
-			if (usedElements != null)
-				log.debug("#templates already used: " + usedElements.size());
+			log.debug("Any element available for mp " + modificationPoint);
 			return null;
 		}
 
 		int elementsFromFixSpace = baseElements.size();
-		log.debug("Templates availables: " + elementsFromFixSpace);
+		log.debug("Templates availables" + elementsFromFixSpace);
 
 		Stats.currentStat.getIngredientsStats().addSize(Stats.currentStat.getIngredientsStats().ingredientSpaceSize,
 				baseElements.size());
 
 		while (attemptsBaseIngredients < elementsFromFixSpace) {
 
+			attemptsBaseIngredients++;
 			log.debug(String.format("Attempts Base Ingredients  %d total %d", attemptsBaseIngredients,
 					elementsFromFixSpace));
 
 			Ingredient baseIngredient = getRandomStatementFromSpace(baseElements);
 
-			if (baseIngredient == null || baseIngredient.getCode() == null) {
+			String newingredientkey = getKey(modificationPoint, operationType);
 
-				return null;
-			}
+			if (baseIngredient != null && baseIngredient.getCode() != null) {
 
-			Ingredient refinedIngredient = getNotUsedTransformedElement(modificationPoint, operationType,
-					baseIngredient);
+				// check if the element was already used
+				if (DESACTIVATE_CACHE || !this.cache.containsKey(newingredientkey)
+						|| !this.cache.get(newingredientkey).contains(baseIngredient.getChacheCodeString())) {
+					this.cache.add(newingredientkey, baseIngredient.getChacheCodeString());
+					return baseIngredient;
+				}
 
-			attemptsBaseIngredients++;
-
-			if (refinedIngredient != null) {
-
-				refinedIngredient.setDerivedFrom(baseIngredient.getCode());
-				return refinedIngredient;
 			}
 
 		} // End while
@@ -100,41 +112,27 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 
 	}
 
-	@Override
-	protected Ingredient getOneIngredientFromList(List<Ingredient> ingredientsAfterTransformation) {
+	public String getKey(ModificationPoint modPoint, AstorOperator operator) {
+		String lockey = modPoint.getCodeElement().getPosition().toString() + "-" + modPoint.getCodeElement() + "-"
+				+ operator.toString();
+		return lockey;
+	}
 
-		if (ingredientsAfterTransformation.isEmpty()) {
-			log.debug("No more elements from the ingredients space");
+	/**
+	 * 
+	 * @param fixSpace
+	 * @return
+	 */
+	protected Ingredient getRandomStatementFromSpace(List<Ingredient> fixSpace) {
+		if (fixSpace == null)
 			return null;
-		}
-		log.debug(String.format("Obtaining the best element out of %d: %s", ingredientsAfterTransformation.size(),
-				ingredientsAfterTransformation.get(0).getCode()));
-		// Return the first one
-		return ingredientsAfterTransformation.get(0);
+		int size = fixSpace.size();
+		int index = RandomManager.nextInt(size);
+		return fixSpace.get(index);
+
 	}
 
-	private Ingredient getTemplateByWeighted(List<Ingredient> elements, List<String> elements2String,
-			Map<String, Double> probs) {
-		// Random value
-		Double randomElement = RandomManager.nextDouble();
-
-		int i = 0;
-		for (String template : probs.keySet()) {
-			double probTemplate = probs.get(template);
-			if (randomElement <= probTemplate) {
-				int index = elements2String.indexOf(template);
-				Ingredient templateElement = elements.get(index);
-				log.debug("BI with prob "+probTemplate+" "+(i++) +" "+templateElement);
-				return templateElement;
-			}
-		}
-		return null;
-	}
-
-	@Override
-	public List<Ingredient> getNotExhaustedBaseElements(ModificationPoint modificationPoint,
-			AstorOperator operationType) {
-
+	public List<Ingredient> geIngredientsFromSpace(ModificationPoint modificationPoint, AstorOperator operationType) {
 		List<Ingredient> elements = this.ingredientSpace.getIngredients(modificationPoint.getCodeElement());
 
 		if (elements == null)
@@ -142,7 +140,7 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 
 		if (operationType instanceof ReplaceOp) {
 			//info -> debug
-			log.info("ModificationPoint: " + modificationPoint.getCodeElement().toString());
+			//log.info("ModificationPoint: " + modificationPoint.getCodeElement().toString());
 			
 			// Create JSON object
 			JSONObject obj = new JSONObject();
@@ -195,10 +193,12 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 	        		filteredElements.add(elements.get(i));
 	        	}
 	        }
-	        log.info(elements.size() + " -> " + filteredElements.size());
+	        log.info("Ingredients Filtering: " + elements.size() + " -> " + filteredElements.size());
 	        elements = filteredElements;
 		}
 
+		return elements;
+		/*
 		List<Ingredient> uniques = new ArrayList<>(elements);
 
 		String key = getKey(modificationPoint, operationType);
@@ -208,6 +208,7 @@ public class SimilarIngredientSearchStrategy extends RandomSelectionTransformedI
 			boolean removed = uniques.removeAll(exhaustives);
 		}
 		return uniques;
+		*/
 	}
 
 }
