@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 import pickle
 import numpy as np
 from extract_features import extract_features
@@ -18,7 +19,8 @@ for ingredient in features:
     X.append(features[ingredient])
 X = np.array(X)
 
-clf = pickle.load(open('model_NN50d_1547464892.sav', 'rb'))
+dir_path = os.path.dirname(os.path.realpath(__file__))
+clf = pickle.load(open(os.path.join(dir_path, 'model_NN50d_1547464892.sav'), 'rb'))
 proba = clf.predict_proba(X)
 
 cands = [str(int(p[1] > T)) for p in proba]

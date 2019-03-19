@@ -69,7 +69,7 @@ public class SimilarIngredientSearchStrategy extends IngredientSearchStrategy {
 
 		int attemptsBaseIngredients = 0;
 
-		List<Ingredient> baseElements = geIngredientsFromSpace(modificationPoint, operationType);
+		List<Ingredient> baseElements = getIngredientsFromSpace(modificationPoint, operationType);
 
 		if (baseElements == null || baseElements.isEmpty()) {
 			log.debug("Any element available for mp " + modificationPoint);
@@ -132,7 +132,7 @@ public class SimilarIngredientSearchStrategy extends IngredientSearchStrategy {
 
 	}
 
-	public List<Ingredient> geIngredientsFromSpace(ModificationPoint modificationPoint, AstorOperator operationType) {
+	public List<Ingredient> getIngredientsFromSpace(ModificationPoint modificationPoint, AstorOperator operationType) {
 		List<Ingredient> elements = this.ingredientSpace.getIngredients(modificationPoint.getCodeElement());
 
 		if (elements == null)
@@ -152,8 +152,9 @@ public class SimilarIngredientSearchStrategy extends IngredientSearchStrategy {
 			obj.put("Ingredients", ingredients);
 
 			String location = ConfigurationProperties.getProperty("location");
-			String modelInputPath = location + "/.simInput" + Instant.now().toEpochMilli();
-			String modelOutputPath = location + "/.simOutput" + Instant.now().toEpochMilli();
+			long timestamp = Instant.now().toEpochMilli();
+			String modelInputPath = location + "/.simInput" + timestamp;
+			String modelOutputPath = location + "/.simOutput" + timestamp;
 
 			try(FileWriter modelInput = new FileWriter(modelInputPath)) {
 				modelInput.write(obj.toJSONString());
@@ -162,7 +163,7 @@ public class SimilarIngredientSearchStrategy extends IngredientSearchStrategy {
 			}
 
 			DefaultExecutor executor = new DefaultExecutor();
-			String[] command = { "python", "find_similar.py", modelInputPath };
+			String[] command = { "python", "src-promising/main/python/find_similar.py", modelInputPath };
 			CommandLine cmdLine = CommandLine.parse(command[0]);
 		    for (int i = 1, n = command.length; i < n; i++ ) {
 		        cmdLine.addArgument(command[i]);
